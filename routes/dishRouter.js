@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-require("mongoose");
+const mongoose = require("mongoose");
 const authenticate = require("../authenticate");
 const Dishes = require("../models/dishes");
 
@@ -68,11 +68,11 @@ dishRouter
       )
       .catch((err) => next(err));
   })
-  .post(authenticate.verifyUser, (req, res, next) => {
+  .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end("POST operation not supported on /dishes/" + req.params.dishId);
   })
-  .put(authenticate.verifyUser, (req, res, next) => {
+  .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findByIdAndUpdate(
       req.params.dishId,
       {
@@ -90,18 +90,22 @@ dishRouter
       )
       .catch((err) => next(err));
   })
-  .delete(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findByIdAndRemove(req.params.dishId)
-      .then(
-        (resp) => {
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "application/json");
-          res.json(resp);
-        },
-        (err) => next(err)
-      )
-      .catch((err) => next(err));
-  });
+  .delete(
+    authenticate.verifyUser,
+    authenticate.verifyAdmin,
+    (req, res, next) => {
+      Dishes.findByIdAndRemove(req.params.dishId)
+        .then(
+          (resp) => {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json(resp);
+          },
+          (err) => next(err)
+        )
+        .catch((err) => next(err));
+    }
+  );
 
 dishRouter
   .route("/:dishId/comments")
@@ -249,9 +253,13 @@ dishRouter
             err = new Error("Dish " + req.params.dishId + " not found");
             err.status = 404;
             return next(err);
-          } else {
+          } else if (dish.comments.id(req.params.commentId) == null) {
             err = new Error("Comment " + req.params.commentId + " not found");
             err.status = 404;
+            return next(err);
+          } else {
+            err = new Error("you are not authorized to update this comment!");
+            err.status = 403;
             return next(err);
           }
         },
@@ -281,9 +289,13 @@ dishRouter
             err = new Error("Dish " + req.params.dishId + " not found");
             err.status = 404;
             return next(err);
-          } else {
+          } else if (dish.comments.id(req.params.commentId) == null) {
             err = new Error("Comment " + req.params.commentId + " not found");
             err.status = 404;
+            return next(err);
+          } else {
+            err = new Error("you are not authorized to delete this comment!");
+            err.status = 403;
             return next(err);
           }
         },
