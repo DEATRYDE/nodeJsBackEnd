@@ -22,7 +22,7 @@ const Promotions = require("./models/promotions");
 const Leaders = require("./models/leadership");
 
 const url = config.mongoUrl;
-const connect = mongoose.connect(url);
+const connect = mongoose.connect(url, { useNewUrlParser: true });
 
 connect.then(
   (db) => {
@@ -34,6 +34,18 @@ connect.then(
 );
 
 var app = express();
+
+// Secure traffic only
+app.all("*", (req, res, next) => {
+  if (req.secure) {
+    return next();
+  } else {
+    res.redirect(
+      307,
+      "https://" + req.hostname + ":" + app.get("secPort") + req.url
+    );
+  }
+});
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
